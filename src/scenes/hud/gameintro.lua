@@ -22,6 +22,7 @@ local hudintro = {
 
 -- listeners
 local function tick( self, ... )
+    if not (self.label) then return end
 	self.time = self.time - 1
 	if (self.time == 0) then
 		transition.to( self.label, { y=_H, time=200})
@@ -45,7 +46,7 @@ end
 -- functions
 
 function hudintro:draw( )
-	if (self.view) then return end
+    if (self.view) then return end
 	self.view = display.newGroup( )
 
 	self.background = display.newRect( 0, 0, _W, _H )
@@ -82,9 +83,15 @@ end
 function hudintro:play( time )
 	self.time = time or 3
 	-- play the green animation
-	transition.to( self.animation, { alpha=1, time=100, onComplete=function( ... )
-			self.animation:play()
-		end} )
+	transition.to( self.animation, { 
+		alpha=1, 
+		time=100, 
+		onComplete = function( ... )
+			if(self.animation) then
+				self.animation:play()
+			end
+		end
+	} )
 	-- play the text and start the count down
 
 	timer.performWithDelay( 300, function () _G.soundManager:play("count") end )

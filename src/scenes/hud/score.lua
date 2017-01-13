@@ -17,8 +17,10 @@ local hudscore = {
 	label=nil, 
 	shadow=nil, 
 	animation=nil, 
-	view=nil 
+	view=nil,
+	healthFull=nil
 }
+
 
 -- functions
 
@@ -32,13 +34,38 @@ function hudscore:draw( score )
 	self.animation.y = 27
 	self.animation.x = _W/2
 	self.animation:setSequence( "start" )
+	self.view:insert(self.animation)
 
 	self.shadow = display.newText(self.score, _W/2+2, 52, "Alba Matter", 30)
 	self.shadow:setFillColor(0,0,0,.8)
+	self.view:insert(self.shadow)
 	self.label  = display.newText(self.score, _W/2, 50, "Alba Matter", 31)
 	self.label:setFillColor(1,1,1)
-	Runtime:addEventListener( "score", self.addscore )
+	self.view:insert(self.label)
+
+
+	-- Overlay the "outline" object over the "filled" object
+	local healthEmpty = display.newImageRect( "images/health-empty.png", 25, 300 )
+	healthEmpty.x = 15
+	healthEmpty.y = 150
+	self.view:insert(healthEmpty)
+
+	-- Place the "filled" object on the screen
+	self.healthFull = display.newImageRect( "images/health-full.png", 25, 300 )
+	self.healthFull.x = 15
+	self.healthFull.y = 150
+	self.view:insert(self.healthFull)
+	 
+	-- Create the mask object
+	local healthMask = graphics.newMask( "images/health-mask.png" )
+	-- Apply the mask to the bottom image ('filledUI')
+	self.healthFull:setMask( healthMask )
+	self.healthFull.maskY = 10
+	 
+	Runtime:addEventListener( "score", self.eventScore )
+	Runtime:addEventListener( "health", self.eventHealth )
 end
+
 
 function hudscore:destroy( )
 	if (self.label ) then self.label:removeSelf()  end
@@ -50,12 +77,12 @@ function hudscore:destroy( )
 	self.shadow = nil
 	self.view   = nil
 	self.score  = 0
-	Runtime:removeEventListener( "score", self.addscore )
+	Runtime:removeEventListener( "score", self.eventScore )
+	Runtime:removeEventListener( "health", self.eventHealth )
 end
 
 -- listeners
-
-function hudscore.addscore(event)
+function hudscore.eventScore(event)
 	local value = event.value or 0
 	self = hudscore
 	-- don't let the score be negative
@@ -68,6 +95,13 @@ function hudscore.addscore(event)
 		local channel = _G.soundManager:play("warp", {delay=100})
 		audio.setVolume( .2, {channel=channel} )
 	end
+end
+
+function hudscore.eventHealth( event )
+	local value = event.value or 0
+	local min = 10
+	local max = 250
+	transition.to(hudscore.healthFull, {maskY = max - ((max - min) * value), time = 1000})
 end
 
 return hudscore

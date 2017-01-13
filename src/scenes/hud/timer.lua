@@ -45,6 +45,8 @@ local function tick(self, event)
    	else
    		self.bar.alpha = 0
    	end
+
+	Runtime:dispatchEvent({ name = "health", value=scale } )
 	
 	if(self.tleft==0)then
     	self.label.text  = ""

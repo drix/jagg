@@ -5,14 +5,14 @@
 
 -------------------------------------------------------------------------
 
-local storyboard = require( "storyboard" )
-local scene = storyboard.newScene()
+local composer = require( "composer" )
+local scene    = composer.newScene()
 
 -----------------------------------------------
--- *** STORYBOARD SCENE EVENT FUNCTIONS ***
+-- *** COMPOSER SCENE EVENT FUNCTIONS ***
 ------------------------------------------------
 
-function scene:createScene( event )
+function scene:create( event )
 	self.view = display.newGroup( )
 	
  	-- logo 
@@ -22,14 +22,21 @@ function scene:createScene( event )
 	self.view:insert(self.logo)
 end
 
-function scene:enterScene( event )
-    storyboard.gotoScene( "scenes.game", "fade", 250 )
+function scene:show( event )
+    local phase = event.phase
+
+    if ( phase == "will" ) then
+        -- Called when the scene is still off screen (but is about to come on screen).
+    elseif ( phase == "did" ) then
+    	--composer.gotoScene( "scenes.game", "fade", 250 )
+        print('restart scene')
+    end
 end
 
 -----------------------------------------------
 -- Add the story board event listeners
 -----------------------------------------------
-scene:addEventListener( "createScene", scene )
-scene:addEventListener( "enterScene", scene )
+scene:addEventListener( "create", scene )
+scene:addEventListener( "show", scene )
 
 return scene

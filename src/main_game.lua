@@ -20,9 +20,8 @@ end
 _G.soundManager = require( "sounds.manager" )
 
 --Import storyboard etc
-local storyboard = require "storyboard"
-storyboard.purgeOnSceneChange = true --So it automatically purges for us.
+local composer = require( "composer" )
+composer.recycleOnSceneChange = true --So it automatically purges for us.
 
 --Now change scene to go to the menu.
-storyboard.gotoScene( "scenes.start", "fade", 400 )
---storyboard.gotoScene( "scenes.game", "fade", 250 )
+composer.gotoScene( "scenes.start", "fade", 400 )

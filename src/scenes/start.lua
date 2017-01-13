@@ -7,10 +7,11 @@
 local physics = require( "physics" )
 local widget  = require( "widget" )
 
+
 local soundManager = require( "sounds.manager" )
 
-local storyboard = require( "storyboard" )
-local scene = storyboard.newScene()
+local composer = require( "composer" )
+local scene    = composer.newScene()
 
 -- properties
 scene.shouldAcumulateGems = true
@@ -35,13 +36,39 @@ scene.roof = nil
 
 local newgameSheet = graphics.newImageSheet("images/newgame.png", {height=46, width=189, numFrames=2, sheetContentWidth=189, sheetContentHeight=92})
 	
+ 
+local object = display.newRect( 15, 100, 25, 300 )
+local composide = {
+	type="composite",
+	paint1={ type="image", filename="images/health-full.png" },
+	paint2={ type="image", filename="images/health-full-n.png" }
+}
+local lightPosY = 0
+local lightDir  = 0.02
+object.fill = composide
+object.fill.effect = "composite.normalMapWith1DirLight"
+object.fill.effect.dirLightDirection = { 1, lightPosY, 1 }
+object.fill.effect.dirLightColor = { 0.8, 0.8, 0.8, 0.8 }
+object.fill.effect.ambientLightIntensity = 1.2
+
+Runtime:addEventListener( "enterFrame", function( ... )
+		--object.fill.effect.dirLightDirection= { 1, 0, 1 }
+		lightPosY = (lightPosY + lightDir)
+		object.fill.effect.dirLightDirection = { lightPosY, 0, 1 }
+		--object.fill.effect.ambientLightIntensity = lightPosY
+		if(lightPosY >= 1) then lightDir = -0.02 end
+		if(lightPosY <= 0) then lightDir = 0.02 end
+		
+	end )
 ------- Event Listeners ---------------
 
 local listenerOnEnterFrame = nil
 
 local function enterFrame( self, event )
 	-- animate gear
-	self.gear.rotation = scene.gear.rotation + 2
+	if not self.gear == nil then
+		self.gear.rotation = scene.gear.rotation + 2
+	end
 	-- animate buttons
 	self.btNewgame.y = self.btNewgame.fixY + math.sin( system.getTimer() * .2 ) * 1.2 
 	-- create new gems
@@ -76,10 +103,11 @@ end
 
 
 -----------------------------------------------
--- *** STORYBOARD SCENE EVENT FUNCTIONS ***
+-- *** COMPOSER SCENE EVENT FUNCTIONS ***
 ------------------------------------------------
 
-function scene:createScene( event )
+function scene:create( event )
+	print('scene:create start')
     local group = self.view
 
     -- background
@@ -137,66 +165,84 @@ function scene:createScene( event )
  	self.btNewgame.y = (display.contentHeight * 0.8)
 	self.btNewgame.fixY = (display.contentHeight * 0.8)
  	group:insert(self.btNewgame)
-end
-
-
-function scene:enterScene( event )
-    local group = self.view
-    physics.start()
-	physics.setGravity( 0, 9.81 )
-  	--physics.setDrawMode("hybrid")
-
-    physics.addBody( self.logo, "dynamic", {density=1.0, friction=0.5, bounce=0.1} )
-    physics.addBody( self.gear, "static",  {density=1.0, friction=0.5, bounce=0.1} )
-	self.logo.isSleepingAllowed = false
-	self.logo.isSensor = true
-	self.gear.isSensor = true
-	local pivot = physics.newJoint( "pivot", self.gear, self.logo,self.gear.x+1, self.gear.y-20 )
-	
-	physics.addBody( self.btNewgame, "static", {shape={ 0,5, 95,0, 190,35, 190,5, 0,35},density=1.0, friction=0.5, bounce=0.1} )
-    physics.addBody( self.floor, 	 "static", {density=1.0, friction=0.5, bounce=0.1} )
-    physics.addBody( self.wallleft,  "static", {density=1.0, friction=0.5, bounce=0.1} )
-    physics.addBody( self.wallright, "static", {density=1.0, friction=0.5, bounce=0.1} )
-    physics.addBody( self.roof, 	 "static", {density=1.0, friction=0.5, bounce=0.1} )
-    self.floor.isSensor = (true ~= self.shouldAcumulateGems)
 
     -- listeners
     listenerOnEnterFrame =  function ( ... ) enterFrame(self, ...) end
     listenerOnCollision  =  function ( ... ) onCollision(self, ...) end
-	-- function disabled because I didn't have a device to test it =(
-	--Runtime:addEventListener( "accelerometer", listenerOnAccelerate )
-	Runtime:addEventListener( "enterFrame",    listenerOnEnterFrame ) 
-	if not (self.shouldAcumulateGems) then
-		Runtime:addEventListener( "collision",  listenerOnCollision  )
-	end
 
-	-- music
-	self.music = _G.soundManager:play("intro",{ loops=-1,volume=.1,channel=1 })
-	audio.setVolume( .3, {channel=1} )
+	self.logo.isSleepingAllowed = false
+	self.logo.isSensor = true
+	self.gear.isSensor = true
+	self.floor.isSensor = (true ~= self.shouldAcumulateGems)
 end
 
 
-function scene:destroyScene( event )
-	physics.setGravity( 0, 9.81 )
-    physics.stop()
+function scene:show( event )
+	print('scene:show start')
+
+    local phase = event.phase
+    local group = self.view
+
+    if ( phase == "will" ) then
+    	physics.start()
+	    physics.setGravity( 0, 9.81 )
+		--physics.setDrawMode("hybrid")
+
+		local logoCollisionFilter = { categoryBits=1, maskBits=0 } 
+	    physics.addBody( self.logo, "dynamic", {density=1.0, friction=0.5, bounce=0.1, filter=logoCollisionFilter } )
+	    physics.addBody( self.gear, "static",  {density=1.0, friction=0.5, bounce=0.1, filter=logoCollisionFilter } )
+		physics.newJoint( "pivot", self.gear, self.logo,self.gear.x+1, self.gear.y-20 )
+		
+		physics.addBody( self.btNewgame, "static", {shape={ 0,5, 95,0, 190,35, 190,5, 0,35},density=1.0, friction=0.5, bounce=0.1} )
+	    physics.addBody( self.floor, 	 "static", {density=1.0, friction=0.5, bounce=0.1} )
+	    physics.addBody( self.wallleft,  "static", {density=1.0, friction=0.5, bounce=0.1} )
+	    physics.addBody( self.wallright, "static", {density=1.0, friction=0.5, bounce=0.1} )
+	    physics.addBody( self.roof, 	 "static", {density=1.0, friction=0.5, bounce=0.1} )
+	  	physics.addBody( self.btNewgame, "static", {shape={ 0,5, 95,0, 190,35, 190,5, 0,35},density=1.0, friction=0.5, bounce=0.1} )
+
+
+		-- music
+		self.music = _G.soundManager:play("intro",{ loops=-1,volume=.1,channel=1 })
+		audio.setVolume( .3, {channel=1} )
+
+    elseif ( phase == "did" ) then
+
+	    -- listeners
+		--Runtime:addEventListener( "accelerometer", listenerOnAccelerate )
+		Runtime:addEventListener( "enterFrame",    listenerOnEnterFrame ) 
+		if not (self.shouldAcumulateGems) then
+			Runtime:addEventListener( "collision",  listenerOnCollision  )
+		end
+    end
 end
 
-function scene:exitScene( event )
+function scene:hide( event )
+	print('scene:hide start')
 	-- remove listeners
 	Runtime:removeEventListener( "enterFrame", 	  listenerOnEnterFrame  )
 	Runtime:removeEventListener( "collision", 	  listenerOnCollision   )
 	--Runtime:removeEventListener( "accelerometer", listenerOnAccelerate  )
-	listenerOnEnterFrame = nil
-	listenerOnCollision  = nil
-
-	-- remove floor to stop collision detection
-	self.floor:removeSelf( )
 
 	-- animations on exit
+	self.floor.bodyType = "dynamic"
 	physics.addBody( self.btNewgame, "dynamic", {density=1.0, friction=0.5, bounce=0.1} )
   	physics.addBody( self.logo, "dynamic", {density=1.0, friction=0.5, bounce=0.1} )
 	physics.addBody( self.gear, "dynamic",  {density=1.0, friction=0.5, bounce=0.1} )
+
 end
+
+function scene:destroy( event )
+	print('scene:destroy start')
+	listenerOnEnterFrame = nil
+	listenerOnCollision  = nil
+
+	physics.setGravity( 0, 9.81 )
+    physics.stop()
+end
+
+-----------------------------------------------
+-- Game function
+-----------------------------------------------
 
 function scene:move( event )
     local body  = event.target
@@ -237,17 +283,19 @@ function scene:createGem( )
 end
 
 function scene:startNewgame( event )
+	print('scene:startNewgame')
 	audio.fadeOut({ channel=self.music, time=3000 })
 	_G.soundManager:play("pop")
-    storyboard.gotoScene( "scenes.game", "fade", 250 )
+    composer.gotoScene( "scenes.game", "fade", 500 )
+
 end
 
 -----------------------------------------------
 -- Add the story board event listeners
 -----------------------------------------------
-scene:addEventListener( "createScene", scene )
-scene:addEventListener( "enterScene", scene )
-scene:addEventListener( "exitScene", scene )
-scene:addEventListener( "destroyScene", scene )
+scene:addEventListener( "create", scene )
+scene:addEventListener( "show", scene )
+scene:addEventListener( "hide", scene )
+scene:addEventListener( "destroy", scene )
 
 return scene

@@ -65,7 +65,7 @@ function test_gemboardDisposeItems()
 	lunatest.assert_not_nil(gem1, "gemboard:getItemAtIndex fail.")
 
 	local dispose = {
-		[1]={} 		-- type 1, nothing to be disposed
+		[1]={},		-- type 1, nothing to be disposed
 		[2]={[1]=3} -- type 2, one item, at index 3 to be disposed
 	}
 	newgemboard:disposeItems(dispose,false)

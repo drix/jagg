@@ -8,8 +8,8 @@
 local physics = require( "physics" )
 local widget  = require( "widget" )
 
-local storyboard = require( "storyboard" )
-local scene      = storyboard.newScene()
+local composer = require( "composer" )
+local scene    = composer.newScene()
 
 local soundManager = require( "sounds.manager" )
 
@@ -19,7 +19,7 @@ local gemgame  = require( "core.gemgame" )
 -- properties
 scene.background = nil
 scene.game = nil
-scene.timeLimit = 60
+scene.timeLimit = 5
 
 -- GUI
 scene.btPause  = nil
@@ -29,6 +29,7 @@ scene.txtScore = nil
 scene.hudtimer = nil
 scene.hudscore = nil
 scene.hudintro = nil
+scene.hudparticles = nil
 scene.hudgameover = nil
 
 scene.message = nil
@@ -37,10 +38,11 @@ scene.message = nil
 scene.music = nil
 
 -----------------------------------------------
--- *** STORYBOARD SCENE EVENT FUNCTIONS ***
+-- *** COMPOSER SCENE EVENT FUNCTIONS ***
 ------------------------------------------------
 
-function scene:createScene( event )
+function scene:create( event )
+	print('scene:create game')
 	self.background = display.newImageRect("images/background.jpg", _W+100,_H)
 	self.background.anchorX = 0
 	self.background.anchorY = 0
@@ -51,11 +53,11 @@ function scene:createScene( event )
 	-- HUDs
 	self.hudtimer 	 = require( "scenes.hud.timer")
     self.hudscore 	 = require( "scenes.hud.score")
-	self.hudintro 	 = require( "scenes.hud.gameintro")
+	self.hudparticles= require( "scenes.hud.particles" )
+	self.hudintro 	 = require( "scenes.hud.levelinstructions")
 	self.hudgameover = require( "scenes.hud.gameover" )
-end
 
-function scene:enterScene( event )
+
     -- Create game
     local gemtypes = {
 		gem.new({type=1}), -- gem blue
@@ -71,38 +73,61 @@ function scene:enterScene( event )
 	-- draw HUDs
 	self.hudtimer:draw(self.timeLimit)
     self.hudscore:draw(0)
-    self.hudintro:draw()
+    self.hudparticles:draw()
+    self.hudintro:create()
+	self.view:insert( self.hudtimer.view )
+	self.view:insert( self.hudscore.view )
+	self.view:insert( self.hudparticles.view )
+	self.view:insert( self.hudintro.view )
 
-    -- add listeners
-    Runtime:addEventListener( "timeout",   self.endGame     )
-	Runtime:addEventListener( "startGame", self.startGame   )
-	Runtime:addEventListener( "restart",   self.restartGame )
-	Runtime:addEventListener( "noMoreMoviments", self.refreshGame )
-	
-	-- start music and intro (countdown)
-	self.music = _G.soundManager:play("bass-loop",{ loops=-1,channel=2})
-	self.hudintro:play()
 end
 
-function scene:exitScene( event )
-    Runtime:removeEventListener( "timeout",   self.endGame     )
-	Runtime:removeEventListener( "startGame", self.startGame   )
-	Runtime:removeEventListener( "restart",   self.restartGame )
-	Runtime:removeEventListener( "noMoreMoviments", self.refreshGame )
+function scene:show( event )
+	print('scene:show game')
 
+	local phase = event.phase
+
+    if ( phase == "will" ) then
+	    -- add listeners
+	    Runtime:addEventListener( "timeout",   self.endGame     )
+		Runtime:addEventListener( "startGame", self.startGame   )
+		Runtime:addEventListener( "restart",   self.restartGame )
+		Runtime:addEventListener( "noMoreMoviments", self.refreshGame )
+		
+		-- start music and intro (countdown)
+		self.music = _G.soundManager:play("bass-loop",{ loops=-1,channel=2})
+    elseif ( phase == "did" ) then
+		self.hudintro:show()
+		
+    end
+end
+
+function scene:hide( event )
+	print('scene:hide game')
+	local phase = event.phase
+    if ( phase == "will" ) then
+	    Runtime:removeEventListener( "timeout",   self.endGame     )
+		Runtime:removeEventListener( "startGame", self.startGame   )
+		Runtime:removeEventListener( "restart",   self.restartGame )
+		Runtime:removeEventListener( "noMoreMoviments", self.refreshGame )
+		self.isActive = false
+    elseif ( phase == "did" ) then
+		-- clear huds
+		self.hudintro:destroy()
+		self.hudscore:destroy()
+		self.hudtimer:destroy()
+		self.hudgameover:destroy()
+		self.hudparticles:destroy()
+		-- destroy game
+		self.game:destroy()
+
+	end
 	--audio.stop(self.music)
-
-	-- clear huds
-	self.hudintro:destroy()
-	self.hudscore:destroy()
-	self.hudtimer:destroy()
-	self.hudgameover:destroy()
-	-- destroy game
-	self.game:destroy()
-	self.game = nil
 end
 
-function scene:destroyScene( event )
+function scene:destroy( event )
+	print('scene:destroy game')
+
 	self.background = nil
 	self.hudtimer   = nil
 	self.hudscore   = nil
@@ -121,7 +146,7 @@ function scene:startGame( event )
 end
 
 function scene:restartGame( event )
-    storyboard.gotoScene( "scenes.restart", "fade", 250 )
+    composer.gotoScene( "scenes.restart", "fade", 250 )
 end
 
 -- No more moviments will never be called on a 7x9 board, but in another levels it may be
@@ -160,15 +185,15 @@ function scene:endGame( )
 
 	-- show the stars and reset button, the first argument is the delay it will apear
 	self.hudgameover:draw()
-	self.hudgameover:play(3000,self.hudscore.score)
+	self.view:insert( self.hudgameover.view )
+	self.hudgameover:play(1000,self.hudscore.score)
 end
 
 -----------------------------------------------
 -- Add the story board event listeners
 -----------------------------------------------
-scene:addEventListener( "createScene", scene )
-scene:addEventListener( "enterScene", scene )
-scene:addEventListener( "exitScene", scene )
-scene:addEventListener( "destroyScene", scene )
-
+scene:addEventListener( "create", scene )
+scene:addEventListener( "show", scene )
+scene:addEventListener( "hide", scene )
+scene:addEventListener( "destroy", scene )
 return scene

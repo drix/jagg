@@ -164,6 +164,7 @@ end
 
 function hudgameover.enterFrame( event )
 	self = hudgameover
+	if not (self.btRestart) then return end
 	self.btRestart.y = self.btRestart.fixY + math.sin( system.getTimer() * .2 ) * 1.2 
 end
 

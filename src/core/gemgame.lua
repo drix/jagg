@@ -285,6 +285,12 @@ function gemgame:animateDie(disposal)
 			dying.x = pos.col * self.board.tileWidth - self.board.tileWidth *.5
 			dying.y = pos.row * self.board.tileHeight - self.board.tileHeight *.5
 			dying:play()
+
+			Runtime:dispatchEvent({name="emitGem", from={
+					x = dying.x + self.board.x,
+					y = dying.y + self.board.y
+				}, type=gtype})
+
 			local function didDie( event )
 				if ( event.phase == "ended" ) then
 			 		dying:removeEventListener( "sprite", didDie )
